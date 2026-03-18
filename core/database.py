@@ -60,6 +60,7 @@ class Database:
                 expires_at DATETIME NOT NULL,
                 stars_paid INTEGER NOT NULL,
                 telegram_payment_id TEXT,
+                notified INTEGER DEFAULT 0,
                 FOREIGN KEY (user_id) REFERENCES users(id)
             );
 
@@ -68,6 +69,13 @@ class Database:
             CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
         """)
         await self._conn.commit()
+
+        # Add notified column if not exists (migration)
+        try:
+            await self._conn.execute("ALTER TABLE subscriptions ADD COLUMN notified INTEGER DEFAULT 0")
+            await self._conn.commit()
+        except:
+            pass  # Column already exists
 
     async def get_or_create_user(self, telegram_id: int, username: Optional[str] = None) -> User:
         """Get existing user or create a new one."""
@@ -264,6 +272,26 @@ class Database:
             "paid_users": paid_users,
             "active_subs": active_subs,
         }
+
+    async def get_expired_unnotified_subscriptions(self) -> list:
+        """Get expired subscriptions that haven't been notified yet."""
+        cursor = await self._conn.execute(
+            """SELECT s.id, s.user_id, u.telegram_id, s.telegram_payment_id
+               FROM subscriptions s
+               JOIN users u ON s.user_id = u.id
+               WHERE s.expires_at < ? AND (s.notified = 0 OR s.notified IS NULL)""",
+            (datetime.now().isoformat(),)
+        )
+        rows = await cursor.fetchall()
+        return [{"id": r[0], "user_id": r[1], "telegram_id": r[2], "is_trial": r[3] == "TRIAL"} for r in rows]
+
+    async def mark_subscription_notified(self, subscription_id: int):
+        """Mark subscription as notified."""
+        await self._conn.execute(
+            "UPDATE subscriptions SET notified = 1 WHERE id = ?",
+            (subscription_id,)
+        )
+        await self._conn.commit()
 
 
 # Global database instance
