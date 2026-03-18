@@ -6,7 +6,7 @@ from core.database import db
 from core.config import settings
 from bot.keyboards import main_menu_keyboard
 
-ADMIN_IDS = [389481960]  # Твой Telegram ID
+ADMIN_IDS = [389481960, 666524045]
 
 router = Router()
 
