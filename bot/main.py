@@ -5,7 +5,7 @@ import sys
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, BotCommand
 
 from core.config import settings
 from core.database import db
@@ -100,6 +100,15 @@ async def main():
     dp.callback_query.middleware(ThrottlingMiddleware(rate_limit=0.5))
 
     dp.include_router(setup_routers())
+
+    # Set bot commands menu
+    await bot.set_my_commands([
+        BotCommand(command="start", description="Главное меню"),
+        BotCommand(command="profile", description="Мой профиль"),
+        BotCommand(command="subscribe", description="Купить подписку"),
+        BotCommand(command="instruction", description="Инструкция"),
+        BotCommand(command="support", description="Поддержка"),
+    ])
 
     logger.info("Starting bot...")
 

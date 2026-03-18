@@ -126,3 +126,33 @@ async def cmd_stats(message: Message):
 """
 
     await message.answer(stats_text.strip(), parse_mode="Markdown")
+
+
+@router.message(Command("profile"))
+async def cmd_profile(message: Message):
+    """Show user profile via command."""
+    from bot.handlers.profile import show_profile_message
+    await show_profile_message(message)
+
+
+@router.message(Command("subscribe"))
+async def cmd_subscribe(message: Message):
+    """Buy subscription via command."""
+    from bot.handlers.subscribe import buy_subscription_message
+    await buy_subscription_message(message)
+
+
+@router.message(Command("instruction"))
+async def cmd_instruction(message: Message):
+    """Show instruction via command."""
+    from bot.handlers.subscribe import show_instruction_message
+    await show_instruction_message(message)
+
+
+@router.message(Command("support"))
+async def cmd_support(message: Message):
+    """Show support info."""
+    await message.answer(
+        "💬 *Поддержка*\n\nПо всем вопросам: @WhiteLisVPN",
+        parse_mode="Markdown"
+    )

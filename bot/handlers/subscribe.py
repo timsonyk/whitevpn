@@ -57,28 +57,65 @@ INSTRUCTION_TEXT = """
 """
 
 
-@router.callback_query(F.data == "show_instruction")
-async def show_instruction(callback: CallbackQuery):
-    """Show detailed instruction with images."""
-    # Get media directory path
+async def send_instruction(message: Message):
+    """Send instruction with images."""
     media_dir = Path(__file__).parent.parent / "media"
 
-    # Send instruction images as media group
     media_group = [
         InputMediaPhoto(media=FSInputFile(media_dir / "instruction_1.jpg")),
         InputMediaPhoto(media=FSInputFile(media_dir / "instruction_2.jpg")),
         InputMediaPhoto(media=FSInputFile(media_dir / "instruction_3.jpg")),
     ]
 
-    await callback.message.answer_media_group(media=media_group)
-
-    # Send instruction text
-    await callback.message.answer(
+    await message.answer_media_group(media=media_group)
+    await message.answer(
         INSTRUCTION_TEXT.strip(),
         parse_mode="Markdown",
         reply_markup=back_keyboard()
     )
+
+
+async def show_instruction_message(message: Message):
+    """Show instruction via command."""
+    await send_instruction(message)
+
+
+@router.callback_query(F.data == "show_instruction")
+async def show_instruction(callback: CallbackQuery):
+    """Show detailed instruction with images."""
+    await send_instruction(callback.message)
     await callback.answer()
+
+
+async def send_invoice(message: Message):
+    """Send subscription invoice."""
+    user = await db.get_user_by_telegram_id(message.chat.id)
+
+    if not user:
+        await message.answer("Сначала нажмите /start")
+        return False
+
+    if await db.has_active_subscription(user.id):
+        await message.answer("У вас уже есть активная подписка!")
+        return False
+
+    payload = generate_payment_payload()
+
+    await message.answer_invoice(
+        title="WhiteLis VPN Подписка",
+        description=f"Подписка на {settings.subscription_days} дней. Доступ к VPN для обхода блокировок.",
+        payload=payload,
+        currency="XTR",
+        prices=[
+            LabeledPrice(label="Подписка", amount=settings.subscription_price_stars)
+        ],
+    )
+    return True
+
+
+async def buy_subscription_message(message: Message):
+    """Buy subscription via command."""
+    await send_invoice(message)
 
 
 @router.callback_query(F.data == "buy_subscription")
@@ -90,23 +127,11 @@ async def buy_subscription(callback: CallbackQuery):
         await callback.answer("Ошибка: пользователь не найден", show_alert=True)
         return
 
-    # Check if already has subscription
     if await db.has_active_subscription(user.id):
         await callback.answer("У вас уже есть активная подписка!", show_alert=True)
         return
 
-    payload = generate_payment_payload()
-
-    await callback.message.answer_invoice(
-        title="WhiteLis VPN Подписка",
-        description=f"Подписка на {settings.subscription_days} дней. Доступ к VPN для обхода блокировок.",
-        payload=payload,
-        currency="XTR",  # Telegram Stars
-        prices=[
-            LabeledPrice(label="Подписка", amount=settings.subscription_price_stars)
-        ],
-    )
-
+    await send_invoice(callback.message)
     await callback.answer()
 
 
