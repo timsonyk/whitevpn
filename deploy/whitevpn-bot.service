@@ -1,0 +1,15 @@
+[Unit]
+Description=WhiteVPN Telegram Bot
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/whitevpn
+Environment=PATH=/opt/whitevpn/venv/bin
+ExecStart=/opt/whitevpn/venv/bin/python3 -m bot.main
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
