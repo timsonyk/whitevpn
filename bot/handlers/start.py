@@ -1,12 +1,20 @@
 from aiogram import Router, F
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 
 from core.database import db
 from core.config import settings
 from bot.keyboards import main_menu_keyboard
 
 ADMIN_IDS = [389481960, 666524045]
+
+REPLY_KEYBOARD = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="👤 Профиль"), KeyboardButton(text="📖 Инструкция")],
+        [KeyboardButton(text="⭐ Купить подписку"), KeyboardButton(text="💬 Поддержка")],
+    ],
+    resize_keyboard=True
+)
 
 router = Router()
 
@@ -54,10 +62,16 @@ async def cmd_start(message: Message):
     has_subscription = await db.has_active_subscription(user.id)
     has_had_trial = await db.has_ever_had_subscription(user.id)
 
+    # Send reply keyboard first
     await message.answer(
         WELCOME_TEXT.strip(),
-        reply_markup=main_menu_keyboard(has_subscription, show_trial=not has_had_trial),
+        reply_markup=REPLY_KEYBOARD,
         parse_mode="Markdown"
+    )
+    # Then send inline menu
+    await message.answer(
+        "Выберите действие:",
+        reply_markup=main_menu_keyboard(has_subscription, show_trial=not has_had_trial)
     )
 
 
@@ -126,3 +140,34 @@ async def cmd_stats(message: Message):
 """
 
     await message.answer(stats_text.strip(), parse_mode="Markdown")
+
+
+# Reply keyboard handlers
+@router.message(F.text == "👤 Профиль")
+async def reply_profile(message: Message):
+    """Handle profile button from reply keyboard."""
+    from bot.handlers.profile import show_profile_message
+    await show_profile_message(message)
+
+
+@router.message(F.text == "📖 Инструкция")
+async def reply_instruction(message: Message):
+    """Handle instruction button from reply keyboard."""
+    from bot.handlers.subscribe import show_instruction_message
+    await show_instruction_message(message)
+
+
+@router.message(F.text == "⭐ Купить подписку")
+async def reply_buy(message: Message):
+    """Handle buy subscription button from reply keyboard."""
+    from bot.handlers.subscribe import buy_subscription_message
+    await buy_subscription_message(message)
+
+
+@router.message(F.text == "💬 Поддержка")
+async def reply_support(message: Message):
+    """Handle support button from reply keyboard."""
+    await message.answer(
+        "💬 *Поддержка*\n\nПо любым вопросам обращайтесь: @WhiteLisVPN",
+        parse_mode="Markdown"
+    )
